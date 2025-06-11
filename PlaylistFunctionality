@@ -1,0 +1,67 @@
+package com.echowave.backend.util;
+
+import jakarta.servlet.http.HttpSession;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
+
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+class ListaReproduccionTest {
+
+    @Test
+    void testPlaylistOperations() {
+        // SE CREA UNA SECCION EN MPCKITO
+        HttpSession session = Mockito.mock(HttpSession.class);
+        
+        // SE PRUEBA PLAYLIST VACIA
+        List<Map<String, String>> emptyPlaylist = ListaReproduccion.obtener(session);
+        assertTrue(emptyPlaylist.isEmpty());
+        
+        // SE AGREGA CANCION
+        String filename = "song1.mp3";
+        String path = "/tmp/song1.mp3";
+        ListaReproduccion.agregar(session, filename, path);
+        
+        // SE VERIFICA QUE LA CANCION FUE AÑADIDA
+        verify(session).setAttribute(eq("playlist"), anyList());
+        List<Map<String, String>> playlist = ListaReproduccion.obtener(session);
+        assertEquals(1, playlist.size());
+        assertEquals(filename, playlist.get(0).get("filename"));
+        assertEquals(path, playlist.get(0).get("path"));
+        
+        // SE REMUEVE CANCION
+        Map<String, String> removed = ListaReproduccion.eliminar(session, 0);
+        assertEquals(filename, removed.get("filename"));
+        assertEquals(path, removed.get("path"));
+        
+        // SE VERIFICA QUE LA CANCION FUE REMOVIDA
+        playlist = ListaReproduccion.obtener(session);
+        assertTrue(playlist.isEmpty());
+    }
+    
+    @Test
+    void testShufflePlaylist() {
+        HttpSession session = Mockito.mock(HttpSession.class);
+        
+        // SE AGREGA MULTIPLE CANCIONES
+        ListaReproduccion.agregar(session, "song1.mp3", "/tmp/song1.mp3");
+        ListaReproduccion.agregar(session, "song2.mp3", "/tmp/song2.mp3");
+        ListaReproduccion.agregar(session, "song3.mp3", "/tmp/song3.mp3");
+        
+        // OBTENER LO ORIGINAL
+        List<Map<String, String>> originalOrder = new ArrayList<>(ListaReproduccion.obtener(session));
+        
+        // MEZCLAR
+        ListaReproduccion.mezclar(session);
+        List<Map<String, String>> shuffledOrder = ListaReproduccion.obtener(session);
+        
+        // VERIFICA LO MISMO ELEMENTOS EN DISTINTO ORDEN
+        assertTrue(shuffledOrder.containsAll(originalOrder));
+        assertTrue(originalOrder.containsAll(shuffledOrder));
+        assertNotEquals(originalOrder, shuffledOrder);
+    }
+}
