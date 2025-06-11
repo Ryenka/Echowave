@@ -1,0 +1,75 @@
+package com.echowave.backend.integration;
+
+import com.echowave.backend.controller.AudioController;
+import com.echowave.backend.util.Archivo;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.SpyBean;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.ActiveProfiles;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+
+@SpringBootTest
+@ActiveProfiles("test")
+class PlaylistLifecycleIT {
+
+    @Autowired
+    private AudioController audioController;
+
+    @SpyBean
+    private Archivo archivo; 
+
+    private MockHttpSession session = new MockHttpSession();
+
+    @AfterEach
+    void cleanup() throws Exception {
+        if (session.getAttribute("audioFile") != null) {
+            Files.deleteIfExists(Path.of(session.getAttribute("audioFile").toString()));
+        }
+    }
+
+    @Test
+    void testFullPlaylistLifecycle() throws Exception {
+        // 1. mocki archivo subido
+        MockMultipartFile mockFile = new MockMultipartFile(
+            "file", "test.mp3", "audio/mpeg", "fake audio data".getBytes());
+        
+        // Omitir escrituras reales en el sistema de archivos
+        doReturn(Path.of("target/test-files/temp.mp3").toFile())
+            .when(archivo).guardarArchivoTemporal(any());
+
+        // 2. subir archivo
+        var uploadResponse = audioController.uploadAudio(mockFile, session);
+        assertEquals("success", uploadResponse.getBody().get("status"));
+
+        // 3. agregar plalist
+        String tempPath = uploadResponse.getBody().get("tempPath").toString();
+        var addResponse = audioController.addToPlaylist("test.mp3", tempPath, session);
+        assertEquals("success", addResponse.getBody().get("status"));
+
+        // 4. Verificar que se agrego a playlist
+        var playlistResponse = audioController.getPlaylist(session);
+        assertEquals(1, playlistResponse.getBody().size());
+        assertEquals("test.mp3", playlistResponse.getBody().get(0).get("filename"));
+
+        // 5. ejecutar playlist
+        var playResponse = audioController.playFromPlaylist(0, false, session);
+        assertEquals(200, playResponse.getStatusCodeValue());
+
+        // 6. remover de playlist
+        var removeResponse = audioController.removeFromPlaylist(0, session);
+        assertEquals("success", removeResponse.getBody().get("status"));
+        assertEquals(0, audioController.getPlaylist(session).getBody().size());
+    }
+}
