@@ -20,11 +20,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        <AudioProvider>
-          <PlaylistProvider>
+        <PlaylistProvider>
+          <AudioProvider>
             {children}
-          </PlaylistProvider>
-        </AudioProvider>
+          </AudioProvider>
+        </PlaylistProvider>
       </body>
     </html>
   )
