@@ -6,61 +6,53 @@ import axios from "axios";
 import { useAudio } from "../context/AudioContext";
 import { usePlaylist } from "../context/PlaylistContext"
 import { useSearchParams } from "next/navigation"
-import { Heart, Share2, SkipBack, Play, Pause, SkipForward, Shuffle, Repeat } from "lucide-react"
+import { Heart, Share2, SkipBack, Play, Pause, SkipForward, Shuffle, Repeat, Trash2 } from "lucide-react"
+import Navbar from "@/components/Navbar"
 
 function PlaylistItem({
-  title,
-  artist,
-  duration,
+  track,
+  index,
   isActive,
+  onSelect,
+  onDelete,
+  color,
 }: {
-  title: string
-  artist: string
-  duration: string
-  isActive: boolean
+  track: { fileName: string; };
+  index: number;
+  isActive: boolean;
+  onSelect: (index: number) => void; 
+  onDelete: () => void;
+  color: String;
 }) {
   return (
     <div
-      className={`flex items-center gap-3 p-2 rounded-lg hover:bg-[#1e1b2d] cursor-pointer ${isActive ? "bg-[#1e1b2d]" : ""}`}
+      className={`group flex items-center gap-3 p-2 rounded-lg hover:bg-[#1e1b2d] cursor-pointer ${isActive ? "bg-[#282440] shadow-lg ring-1 ring-purple-500" : ""}`}
+      onClick={() => onSelect(index)} 
     >
-      <div className="w-10 h-10 bg-gray-600 rounded-md"></div>
-      <div className="flex-1 min-w-0">
-        <h4 className="text-sm font-medium truncate">{title}</h4>
-        <p className="text-xs text-gray-400 truncate">{artist}</p>
+      <div className={`w-10 h-10 ${color} rounded-md flex items-center justify-center text-white font-bold`}>
+        {index + 1}
       </div>
-      <span className="text-xs text-gray-400">{duration}</span>
+      <div className="flex-1 min-w-0">
+        <h4 className="text-sm font-medium truncate">{track.fileName}</h4>
+      </div>
+      <button 
+        onClick={(e) => {
+          e.stopPropagation(); 
+          onDelete();
+        }}
+        className="text-red-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity mr-2"
+      >
+        <Trash2 size={16} />
+      </button>
+      {isActive && <div className="text-purple-400"><Play size={16} /></div>}
     </div>
   )
 }
 
 export default function PlayerPage() {
-  const { play, pause, isPlaying, currentTime, duration, seek, setSrc } = useAudio();
-  const { playlist, fetchPlaylist } = usePlaylist()
-  const searchParams = useSearchParams()
+  const { isPlaying, currentTime, duration, seek, togglePlay } = useAudio();
+  const { playlist, currentTrack, currentTrackIndex, playNext, playPrev, shufflePlaylist, setCurrentTrackIndex, deleteTrack } = usePlaylist();
 
-  useEffect(() => {
-    const reload = searchParams.get("reload")
-    if (reload === "true") {
-      fetchPlaylist()
-    }
-  }, [searchParams])
-
-  useEffect(() => {
-  if (playlist.length > 0) {
-    const url = "http://localhost:8080/api/reproductor/stream"
-    setSrc(url)
-  }
-}, [playlist])
-
-  const togglePlay = () => {
-    if (isPlaying) {
-      pause();
-    } else {
-      play();
-    }
-  };
-
-  
   function formatTime(seconds: number) {
     if (!seconds || isNaN(seconds)) return "0:00"
     const mins = Math.floor(seconds / 60)
@@ -68,33 +60,25 @@ export default function PlayerPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`
   }
 
+  const handleDelete = (indexToDelete: number) => {
+    if (window.confirm("¿Segurx que quieres eliminar esta canción de la playlist?")) {
+      deleteTrack(indexToDelete);
+    }
+  };
+
+  const bgColors = [
+    'bg-green-600',
+    'bg-yellow-600',
+    'bg-red-600',
+    'bg-blue-600',
+    'bg-orange-600',
+    'bg-pink-600'
+  ];
+
   return (
     <div className="min-h-screen bg-[#1a1523] text-white flex flex-col">
       {/* Top Navigation */}
-      <nav className="bg-[#1e2139] py-4">
-        <div className="container mx-auto px-4 md:px-6 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gradient-to-r from-green-400 to-purple-500 rounded-md flex items-center justify-center">
-              <div className="w-4 h-4 bg-[#1e2139] rounded-md flex items-center justify-center">
-                <div className="w-2 h-2 bg-gradient-to-r from-green-400 to-purple-500 rounded-sm"></div>
-              </div>
-            </div>
-            <span className="text-xl font-bold">EchoWave</span>
-          </Link>
-
-          <div className="space-x-6">
-            <Link href="/" className="hover:text-purple-400">
-              Home
-            </Link>
-            <Link href="/search" className="hover:text-purple-400">
-              Search
-            </Link>
-            <Link href="/library" className="hover:text-purple-400">
-              Your Library
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Main Content */}
       <main className="flex-1 container mx-auto px-4 md:px-6 py-12">
@@ -108,7 +92,7 @@ export default function PlayerPage() {
                 <div className="flex-1">
                   <p className="text-xs text-gray-400">Now Playing</p>
                   <h2 className="text-lg font-medium">
-                    {(playlist && playlist.length > 0) ? playlist[0].fileName : "No track uploaded"}
+                    {currentTrack ? currentTrack.fileName : "Sube un audio"}
                   </h2>
                   <div className="flex items-center gap-4 mt-6">
                     <button className="text-purple-400 hover:text-purple-300">
@@ -122,26 +106,24 @@ export default function PlayerPage() {
               </div>
             </div>
 
-            {/* Player Controls */}
+            {/* Player Controles */}
             <div className="flex items-center justify-center gap-6 mb-8">
-              <button className="text-gray-400 hover:text-white">
+              <button 
+              onClick={shufflePlaylist}
+              className="text-gray-400 hover:text-white"
+              disabled={playlist.length < 2}
+              >
                 <Shuffle className="h-5 w-5" />
               </button>
-              <button className="text-gray-400 hover:text-white">
-                <SkipBack className="h-5 w-5" />
-              </button>
+              <button onClick={playPrev} className="text-gray-400 hover:text-white"><SkipBack className="h-5 w-5" /></button>
               <button className="bg-purple-600 hover:bg-purple-700 rounded-full p-3" onClick={togglePlay}>
                 {isPlaying ? <Pause className="h-6 w-6 text-white" /> : <Play className="h-6 w-6 text-white" />}
               </button>
-              <button className="text-gray-400 hover:text-white">
-                <SkipForward className="h-5 w-5" />
-              </button>
-              <button className="text-gray-400 hover:text-white">
-                <Repeat className="h-5 w-5" />
-              </button>
+              <button onClick={playNext} className="text-gray-400 hover:text-white"><SkipForward className="h-5 w-5" /></button>
+              <button className="text-gray-400 hover:text-white"><Repeat className="h-5 w-5" /></button>
             </div>
 
-            {/* Progress Bar */}
+            {/* Barra de Progreso */}
             <div className="w-full">
               <div
                 className="relative w-full"
@@ -172,20 +154,24 @@ export default function PlayerPage() {
             </div>
           </div>
           
-          
-          {/* Playlist Section */}
+          {/* Playlist*/}
           <div className="bg-[#2a2d47] rounded-xl p-6 w-full max-w-md">
             <h3 className="text-lg font-medium mb-4">Up Next</h3>
             <div className="space-y-3">
-              {playlist.map((audio, index) => (
-                <PlaylistItem
-                  key={index}
-                  title={audio.fileName}
-                  artist="You"
-                  duration="-:--"
-                  isActive={index === 0}
-                />
-              ))}
+              {playlist.map((track, index) => {
+                const colorClass = bgColors[index % bgColors.length];
+                return (
+                  <PlaylistItem
+                    key={index}
+                    track={track}
+                    index={index}
+                    isActive={index === currentTrackIndex}
+                    onSelect={setCurrentTrackIndex}
+                    onDelete={() => handleDelete(index)}
+                    color={colorClass} 
+                  />
+                );
+              })}
             </div>
           </div>
         </div>

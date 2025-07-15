@@ -8,7 +8,7 @@ import { usePlaylist } from "./context/PlaylistContext"
 import Link from "next/link"
 import { Upload } from "lucide-react"
 import axios from 'axios';
-
+import Navbar from "@/components/Navbar"
 
 export default function UploadPage() {
   
@@ -56,9 +56,9 @@ export default function UploadPage() {
     });
 
     const fileName = response.data.filename;
-    const path = response.data.tempPath;
+    const url = response.data.path || response.data.url
 
-    await agregarAudio({ fileName, path });
+    await agregarAudio({ fileName, url });
 
     router.push("/tracks");
   } catch (error) {
@@ -71,29 +71,7 @@ export default function UploadPage() {
   return (
     <div className="min-h-screen bg-[#1a1523] text-white flex flex-col">
       {/* Top Navigation */}
-      <nav className="bg-[#1a1523] py-4 border-b border-[#2a2541]">
-        <div className="container mx-auto px-4 md:px-6 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gradient-to-r from-green-400 to-purple-500 rounded-md flex items-center justify-center">
-              <div className="w-4 h-4 bg-[#1a1523] rounded-md flex items-center justify-center">
-                <div className="w-2 h-2 bg-gradient-to-r from-green-400 to-purple-500 rounded-sm"></div>
-              </div>
-            </div>
-            <span className="text-xl font-bold">EchoWave</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/tracks" className="text-sm hover:text-purple-400">
-              Tracks
-            </Link>
-            <Link href="/playlists" className="text-sm hover:text-purple-400">
-              Playlists
-            </Link>
-            <Link href="/player" className="text-sm hover:text-purple-400">
-              Player
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Divider */}
       <div className="h-2 bg-[#131926]"></div>

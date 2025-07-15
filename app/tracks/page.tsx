@@ -4,55 +4,19 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import axios from "axios"
 import { useAudio } from "../context/AudioContext";
+import { usePlaylist } from "../context/PlaylistContext";
 import { Search, Heart, MoreHorizontal, Download, Play, Pause } from "lucide-react"
+import Navbar from "@/components/Navbar"
+
 
 export default function TracksPage() {
-  const [ultimoAudio, setUltimoAudio] = useState<{ filename: string } | null>(null);
-  const { play, pause, isPlaying } = useAudio();
-
-  const handlePlay = () => {
-    if (isPlaying) {
-      pause();
-     } else {
-     play();
-   }
- };
-
-
-  useEffect(() => {
-    axios.get("http://localhost:8080/api/archivo/ultimo", {
-      withCredentials: true,
-    })
-      .then(res => setUltimoAudio(res.data))
-      .catch(err => console.error("Error al obtener el archivo subido", err))
-  }, [])
+  const { currentTrack } = usePlaylist();
+  const { togglePlay, isPlaying } = useAudio();
 
   return (
     <div className="min-h-screen bg-[#1a1523] text-white flex flex-col">
       {/* Top Navigation */}
-      <nav className="bg-[#1a1523] py-4 border-b border-[#2a2541]">
-        <div className="container mx-auto px-4 md:px-6 flex justify-between items-center">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gradient-to-r from-green-400 to-purple-500 rounded-md flex items-center justify-center">
-              <div className="w-4 h-4 bg-[#1a1523] rounded-md flex items-center justify-center">
-                <div className="w-2 h-2 bg-gradient-to-r from-green-400 to-purple-500 rounded-sm"></div>
-              </div>
-            </div>
-            <span className="text-xl font-bold">EchoWave</span>
-          </Link>
-          <div className="flex items-center gap-4">
-            <Link href="/tracks" className="text-sm hover:text-purple-400">
-              Tracks
-            </Link>
-            <Link href="/playlists" className="text-sm hover:text-purple-400">
-              Playlists
-            </Link>
-            <Link href="/player" className="text-sm hover:text-purple-400">
-              Player
-            </Link>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* Divider */}
       <div className="h-2 bg-[#131926]"></div>
@@ -97,13 +61,13 @@ export default function TracksPage() {
         {/* Your Uploads Section */}
         <h2 className="text-xl font-medium mb-4">Your Uploads</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-          {ultimoAudio ? (
+          {currentTrack  ? (
           <TrackCard
-            title={ultimoAudio.filename}
+            title={currentTrack.fileName}
             artist="You"
             color="bg-purple-600"
             isNew={true}
-            onPlay={handlePlay}
+            onPlay={togglePlay}
             isPlaying={isPlaying}
           />
         ) : (
@@ -112,7 +76,7 @@ export default function TracksPage() {
             artist="You"
             color="bg-purple-600"
             isNew={true}
-            onPlay={handlePlay}
+            onPlay={togglePlay}
             isPlaying={false}
           />
         )}
